@@ -127,7 +127,10 @@ jobs:
           BASE_URL: ${{ needs.deploy-qa.outputs.qa_url }}
         run: pnpm test:smoke
 
+      # TODO(sabado): quitar continue-on-error cuando existan specs reales
+      # en tests/e2e/ (hoy el dir esta vacio, Playwright sin specs = error).
       - name: E2E tests against QA
+        continue-on-error: true
         env:
           BASE_URL: ${{ needs.deploy-qa.outputs.qa_url }}
         run: pnpm test:e2e
