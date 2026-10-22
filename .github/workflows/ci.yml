@@ -6,7 +6,25 @@ on:
   pull_request:
 
 jobs:
-  build-and-test:
+  # 1. Code Quality & Static Analysis (falla rápido, sin levantar nada)
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+
+  # 2. Unit & Integration Testing (AAA, cobertura, build de verificación)
+  test:
+    needs: quality
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/canchero_test
@@ -25,39 +43,27 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
       - run: pnpm install --frozen-lockfile
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
       - name: Build
         run: pnpm build
-
       - name: Migrate test DB
         run: pnpm db:migrate
-
-      - name: Unit + API tests with coverage
+      - name: Unit + integration + API tests with coverage
         run: pnpm coverage
-
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage/
 
+  # 3. SonarCloud Quality Gate (necesita la cobertura del stage anterior)
   sonarcloud:
-    needs: build-and-test
+    needs: test
     runs-on: ubuntu-latest
     if: ${{ vars.SONAR_ENABLED == 'true' }}
     steps:
@@ -73,26 +79,97 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  deploy-preview:
-    needs: build-and-test
-    if: github.event_name == 'pull_request' && vars.VERCEL_ENABLED == 'true'
+  # 4. End-to-End Testing (flujos completos con Playwright, contra build local)
+  e2e:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/canchero_test
+      AUTH_TEST_LOGIN: "true"
+      BETTER_AUTH_SECRET: test-secret-not-for-prod-use-only-ci
+      BETTER_AUTH_URL: http://localhost:3000
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: canchero_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      - run: npx playwright install --with-deps chromium
+      - name: E2E
+        run: pnpm test:e2e
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+
+  # 5 + 6. Database Migration (Drizzle) + Build & Deploy (Vercel)
+  deploy:
+    needs: [sonarcloud, e2e]
+    if: always() && needs.e2e.result == 'success' && (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'skipped')
     runs-on: ubuntu-latest
     env:
       VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+      target: ${{ steps.target.outputs.target }}
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to Vercel (preview)
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Resolve target environment
+        id: target
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "target=production" >> "$GITHUB_OUTPUT"
+          else
+            echo "target=preview" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Migrate database (Drizzle)
+        if: vars.VERCEL_ENABLED == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+        run: pnpm db:migrate
+
+      - name: Deploy to Vercel
+        if: vars.VERCEL_ENABLED == 'true'
         id: deploy
         run: |
-          url=$(npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }})
+          if [ "${{ steps.target.outputs.target }}" = "production" ]; then
+            url=$(npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }})
+          else
+            url=$(npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }})
+          fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
-    outputs:
-      preview_url: ${{ steps.deploy.outputs.url }}
 
-  smoke-and-e2e:
-    needs: deploy-preview
-    if: github.event_name == 'pull_request' && vars.VERCEL_ENABLED == 'true'
+  # 7. Post-Deploy Smoke Testing
+  smoke:
+    needs: deploy
+    if: needs.deploy.outputs.url != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -105,21 +182,18 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Smoke
         env:
-          BASE_URL: ${{ needs.deploy-preview.outputs.preview_url }}
+          BASE_URL: ${{ needs.deploy.outputs.url }}
         run: pnpm test:smoke
-      - name: E2E
-        env:
-          BASE_URL: ${{ needs.deploy-preview.outputs.preview_url }}
-        run: pnpm test:e2e
 
-  deploy-production:
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main' && vars.VERCEL_ENABLED == 'true'
+  # 8. Performance & Stress Testing (solo en main, luego del smoke)
+  performance:
+    needs: [deploy, smoke]
+    if: needs.deploy.outputs.target == 'production'
     runs-on: ubuntu-latest
-    env:
-      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to Vercel (production)
-        run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - uses: grafana/setup-k6-action@v1
+      - name: k6 search
+        env:
+          BASE_URL: ${{ needs.deploy.outputs.url }}
+        run: k6 run tests/load/search.js
