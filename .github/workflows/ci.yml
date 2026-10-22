@@ -83,7 +83,13 @@ jobs:
       - name: Migrate QA database (Drizzle)
         env:
           DATABASE_URL: ${{ secrets.QA_DATABASE_URL }}
-        run: pnpm db:migrate
+        run: |
+          for i in 1 2 3; do
+            pnpm db:migrate && exit 0
+            echo "Intento $i fallo, reintentando en 5s..."
+            sleep 5
+          done
+          exit 1
 
       - name: Deploy preview build to Vercel (QA)
         id: deploy
@@ -180,7 +186,13 @@ jobs:
       - name: Migrate production database (Drizzle)
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
-        run: pnpm db:migrate
+        run: |
+          for i in 1 2 3; do
+            pnpm db:migrate && exit 0
+            echo "Intento $i fallo, reintentando en 5s..."
+            sleep 5
+          done
+          exit 1
 
       - name: Deploy to Vercel (production)
         id: deploy
