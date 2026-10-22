@@ -5,12 +5,11 @@ on:
     branches: [main]
   pull_request:
 
-env:
-  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/canchero_test
-
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/canchero_test
     services:
       postgres:
         image: postgres:17
@@ -70,7 +69,7 @@ jobs:
           name: coverage
           path: coverage/
       - name: SonarCloud scan
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -86,9 +85,7 @@ jobs:
       - name: Deploy to Vercel (preview)
         id: deploy
         run: |
-          npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
-          url=$(npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          url=$(npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }})
           echo "url=$url" >> "$GITHUB_OUTPUT"
     outputs:
       preview_url: ${{ steps.deploy.outputs.url }}
@@ -125,7 +122,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Vercel (production)
-        run: |
-          npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-          npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
