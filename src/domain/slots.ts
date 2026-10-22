@@ -26,3 +26,22 @@ export function isValidSlotForClub(
 
   return true;
 }
+
+/** `localDate` en formato "YYYY-MM-DD", calendario de America/Argentina/Cordoba. */
+export function generateSlotsForLocalDate(
+  club: ClubSchedule,
+  localDate: string,
+): Date[] {
+  const [year, month, day] = localDate.split("-").map(Number);
+  const slots: Date[] = [];
+
+  for (let hour = club.openHour; hour < club.closeHour; hour += club.slotMinutes / 60) {
+    // Fecha/hora local interpretada como UTC, luego se resta el offset
+    // de Cordoba para obtener el instante UTC real.
+    const localAsUtc = Date.UTC(year!, month! - 1, day, hour, 0, 0);
+    const utcMs = localAsUtc - CORDOBA_UTC_OFFSET_HOURS * 60 * 60 * 1000;
+    slots.push(new Date(utcMs));
+  }
+
+  return slots;
+}
