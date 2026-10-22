@@ -80,6 +80,9 @@ jobs:
     needs: build-and-test
     if: github.event_name == 'pull_request' && vars.VERCEL_ENABLED == 'true'
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Vercel (preview)
@@ -120,6 +123,9 @@ jobs:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && vars.VERCEL_ENABLED == 'true'
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to Vercel (production)
