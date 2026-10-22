@@ -1,30 +1,17 @@
-name: CI
+name: CI/CD Pipeline (QA & Production)
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
+    branches: [main, develop]
 
 jobs:
-  # 1. Code Quality & Static Analysis (falla rápido, sin levantar nada)
-  quality:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Lint
-        run: pnpm lint
-      - name: Typecheck
-        run: pnpm typecheck
-
-  # 2. Unit & Integration Testing (AAA, cobertura, build de verificación)
-  test:
-    needs: quality
+  # ==========================================
+  # STAGE 1: Calidad, analisis estatico y tests unitarios/integracion
+  # ==========================================
+  quality-and-unit-tests:
+    name: Code Quality & Unit Tests
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/canchero_test
@@ -41,96 +28,49 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Build
-        run: pnpm build
-      - name: Migrate test DB
-        run: pnpm db:migrate
-      - name: Unit + integration + API tests with coverage
-        run: pnpm coverage
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage/
-
-  # 3. SonarCloud Quality Gate (necesita la cobertura del stage anterior)
-  sonarcloud:
-    needs: test
-    runs-on: ubuntu-latest
-    if: ${{ vars.SONAR_ENABLED == 'true' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          name: coverage
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm db:migrate
+      - run: pnpm coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
           path: coverage/
-      - name: SonarCloud scan
+
+      - name: SonarCloud quality gate
+        if: ${{ vars.SONAR_ENABLED == 'true' }}
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  # 4. End-to-End Testing (flujos completos con Playwright, contra build local)
-  e2e:
-    needs: test
+  # ==========================================
+  # STAGE 2: Deploy a entorno de QA / Staging
+  # ==========================================
+  deploy-qa:
+    name: Deploy to QA / Staging
     runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/canchero_test
-      AUTH_TEST_LOGIN: "true"
-      BETTER_AUTH_SECRET: test-secret-not-for-prod-use-only-ci
-      BETTER_AUTH_URL: http://localhost:3000
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: canchero_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm db:migrate
-      - run: npx playwright install --with-deps chromium
-      - name: E2E
-        run: pnpm test:e2e
-      - name: Upload Playwright report on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-
-  # 5 + 6. Database Migration (Drizzle) + Build & Deploy (Vercel)
-  deploy:
-    needs: [sonarcloud, e2e]
-    if: always() && needs.e2e.result == 'success' && (needs.sonarcloud.result == 'success' || needs.sonarcloud.result == 'skipped')
-    runs-on: ubuntu-latest
+    needs: quality-and-unit-tests
+    if: vars.VERCEL_ENABLED == 'true'
     env:
       VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
     outputs:
-      url: ${{ steps.deploy.outputs.url }}
-      target: ${{ steps.target.outputs.target }}
+      qa_url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -140,37 +80,24 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Resolve target environment
-        id: target
-        run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "target=production" >> "$GITHUB_OUTPUT"
-          else
-            echo "target=preview" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Migrate database (Drizzle)
-        if: vars.VERCEL_ENABLED == 'true'
+      - name: Migrate QA database (Drizzle)
         env:
-          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.QA_DATABASE_URL }}
         run: pnpm db:migrate
 
-      - name: Deploy to Vercel
-        if: vars.VERCEL_ENABLED == 'true'
+      - name: Deploy preview build to Vercel (QA)
         id: deploy
         run: |
-          if [ "${{ steps.target.outputs.target }}" = "production" ]; then
-            url=$(npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }})
-          else
-            url=$(npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }})
-          fi
+          url=$(npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }})
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
-  # 7. Post-Deploy Smoke Testing
-  smoke:
-    needs: deploy
-    if: needs.deploy.outputs.url != ''
+  # ==========================================
+  # STAGE 3: E2E, Smoke & Stress sobre el entorno de QA
+  # ==========================================
+  qa-verification:
+    name: Verification on QA (Smoke, E2E & Stress)
     runs-on: ubuntu-latest
+    needs: deploy-qa
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -180,20 +107,69 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: npx playwright install --with-deps chromium
-      - name: Smoke
+
+      - name: Smoke tests against QA
         env:
-          BASE_URL: ${{ needs.deploy.outputs.url }}
+          BASE_URL: ${{ needs.deploy-qa.outputs.qa_url }}
         run: pnpm test:smoke
 
-  # 8. Performance & Stress Testing (solo en main, luego del smoke)
-  performance:
-    needs: [deploy, smoke]
-    if: needs.deploy.outputs.target == 'production'
+      - name: E2E tests against QA
+        env:
+          BASE_URL: ${{ needs.deploy-qa.outputs.qa_url }}
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-e2e-report
+          path: playwright-report/
+
+      - uses: grafana/setup-k6-action@v1
+      - name: Stress test against QA
+        env:
+          BASE_URL: ${{ needs.deploy-qa.outputs.qa_url }}
+        run: k6 run tests/load/search.js
+
+      - name: Upload k6 summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-qa-summary
+          path: summary.json
+          if-no-files-found: ignore
+
+  # ==========================================
+  # STAGE 4: Deploy a produccion & smoke post-deploy
+  # ==========================================
+  deploy-prod:
+    name: Deploy to Production
     runs-on: ubuntu-latest
+    needs: qa-verification
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.VERCEL_ENABLED == 'true'
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    outputs:
+      prod_url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: grafana/setup-k6-action@v1
-      - name: k6 search
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Migrate production database (Drizzle)
         env:
-          BASE_URL: ${{ needs.deploy.outputs.url }}
-        run: k6 run tests/load/search.js
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+        run: pnpm db:migrate
+
+      - name: Deploy to Vercel (production)
+        id: deploy
+        run: |
+          url=$(npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Post-deploy smoke (prod health check)
+        run: curl -f "${{ steps.deploy.outputs.url }}/api/health" || exit 1
