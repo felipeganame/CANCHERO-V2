@@ -1,0 +1,13 @@
+node_modules
+.next
+.vercel
+dist
+coverage
+.env
+.env*.local
+*.log
+.DS_Store
+test-results
+playwright-report
+tsconfig.tsbuildinfo
+Canchero — UI UX.html
