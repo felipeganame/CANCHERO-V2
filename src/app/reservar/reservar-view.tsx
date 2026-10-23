@@ -198,6 +198,12 @@ export function ReservarView({
                   </svg>
                   Continuar con Google
                 </button>
+                <Link
+                  href={`/login?next=${encodeURIComponent(currentUrl)}`}
+                  className="mt-4 inline-block text-sm font-semibold text-bordo no-underline hover:underline"
+                >
+                  Otras formas de entrar
+                </Link>
               </div>
             )}
 
