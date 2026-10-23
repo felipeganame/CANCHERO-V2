@@ -200,6 +200,7 @@ export default function PanelCanchasPage() {
             courts?.map((c) => (
               <article
                 key={c.id}
+                data-testid={`court-row-${c.id}`}
                 className={`rounded-[20px] border border-line p-5 ${c.active ? "bg-white" : "bg-[#FBFAFA]"}`}
               >
                 <div className="flex flex-wrap items-center gap-4">

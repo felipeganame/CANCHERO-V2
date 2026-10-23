@@ -91,6 +91,13 @@ jobs:
           done
           exit 1
 
+      - name: Seed E2E accounts (QA)
+        env:
+          DATABASE_URL: ${{ secrets.QA_DATABASE_URL }}
+          BETTER_AUTH_SECRET: ci-seed-only-not-used-for-sessions
+          AUTH_TEST_LOGIN: "true"
+        run: pnpm db:seed:e2e
+
       - name: Deploy preview build to Vercel (QA)
         id: deploy
         run: |
@@ -133,10 +140,7 @@ jobs:
           BASE_URL: ${{ needs.deploy-qa.outputs.qa_url }}
         run: pnpm test:smoke
 
-      # TODO(sabado): quitar continue-on-error cuando existan specs reales
-      # en tests/e2e/ (hoy el dir esta vacio, Playwright sin specs = error).
       - name: E2E tests against QA
-        continue-on-error: true
         env:
           BASE_URL: ${{ needs.deploy-qa.outputs.qa_url }}
         run: pnpm test:e2e

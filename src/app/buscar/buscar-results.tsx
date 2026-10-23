@@ -215,7 +215,7 @@ export function BuscarResults({
                 const minPrice = avail?.minPrice ?? (prices.length ? Math.min(...prices) : 0);
 
                 return (
-                  <Card key={c.club.id}>
+                  <Card key={c.club.id} data-testid={`club-card-${c.club.slug}`}>
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="flex min-w-0 items-start gap-3.5">
                         <span
@@ -264,7 +264,7 @@ export function BuscarResults({
                       )}
                       <span className="flex-1" />
                       <Link
-                        href={`/clubes/${c.club.slug}`}
+                        href={`/clubes/${c.club.slug}?fecha=${encodeURIComponent(fecha)}`}
                         className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-naranja px-4 text-sm font-extrabold text-[#2A0D13] no-underline"
                       >
                         Ver turnos
@@ -300,7 +300,11 @@ export function BuscarResults({
             {clubs.length} resultados
           </p>
           <Link
-            href={clubs[0] ? `/clubes/${clubs[0].club.slug}` : "/buscar"}
+            href={
+              clubs[0]
+                ? `/clubes/${clubs[0].club.slug}?fecha=${encodeURIComponent(fecha)}`
+                : "/buscar"
+            }
             className="inline-flex min-h-11 items-center rounded-xl bg-naranja px-6 text-sm font-extrabold text-[#2A0D13] no-underline"
           >
             Reservar

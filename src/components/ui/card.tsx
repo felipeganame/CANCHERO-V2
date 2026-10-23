@@ -1,12 +1,13 @@
 import { cn } from "@/lib/cn";
+import type { HTMLAttributes } from "react";
 
 export function Card({
   children,
   className,
   selected,
-}: {
+  ...rest
+}: HTMLAttributes<HTMLDivElement> & {
   children: React.ReactNode;
-  className?: string;
   selected?: boolean;
 }) {
   return (
@@ -16,6 +17,7 @@ export function Card({
         selected ? "border-2 border-bordo" : "border border-line",
         className,
       )}
+      {...rest}
     >
       {children}
     </div>
