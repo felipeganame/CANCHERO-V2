@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, ChevronLeft, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
+import { formatPriceARS, formatSlotRange } from "@/lib/format";
 
 interface CourtInfo {
   id: string;
@@ -30,27 +31,6 @@ const SPORT_LABELS: Record<string, string> = {
   tenis: "Tenis",
 };
 
-function formatPrice(n: number): string {
-  return `$ ${n.toLocaleString("es-AR")}`;
-}
-
-function formatDateTime(iso: string): { day: string; range: string } {
-  const start = new Date(iso);
-  const startLocal = new Date(start.getTime() + -3 * 60 * 60 * 1000);
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
-  const endLocal = new Date(end.getTime() + -3 * 60 * 60 * 1000);
-
-  const day = startLocal.toLocaleDateString("es-AR", {
-    weekday: "long",
-    day: "numeric",
-    month: "numeric",
-    timeZone: "UTC",
-  });
-  const startH = `${String(startLocal.getUTCHours()).padStart(2, "0")}:${String(startLocal.getUTCMinutes()).padStart(2, "0")}`;
-  const endH = `${String(endLocal.getUTCHours()).padStart(2, "0")}:${String(endLocal.getUTCMinutes()).padStart(2, "0")}`;
-  return { day, range: `${startH} – ${endH}` };
-}
-
 type Step = "login" | "confirm" | "done" | "taken";
 
 export function ReservarView({
@@ -70,7 +50,7 @@ export function ReservarView({
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { day, range } = formatDateTime(startsAt);
+  const { day, range } = formatSlotRange(startsAt);
   const sportLabel = SPORT_LABELS[court.sport] ?? court.sport;
 
   async function handleGoogleLogin() {
@@ -350,7 +330,7 @@ export function ReservarView({
             <div className="mt-5 flex items-baseline justify-between border-t border-dashed border-line pt-4">
               <span className="text-sm text-muted">Total</span>
               <span className="text-2xl font-extrabold tabular-nums">
-                {formatPrice(court.pricePerSlot)}
+                {formatPriceARS(court.pricePerSlot)}
               </span>
             </div>
           </aside>

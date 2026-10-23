@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { SlotChip } from "@/components/ui/slot-chip";
+import { formatSlotHour, formatPriceARS, formatLocalDateLong } from "@/lib/format";
 import type { ClubWithCourts } from "@/server/repositories/types";
 
 interface SlotInfo {
@@ -18,32 +19,6 @@ interface ClubAvailability {
   minPrice: number;
   maxPrice: number;
   freeCount: number;
-}
-
-function formatHour(iso: string): string {
-  const d = new Date(iso);
-  const localMs = d.getTime() + -3 * 60 * 60 * 1000;
-  const local = new Date(localMs);
-  const h = local.getUTCHours().toString().padStart(2, "0");
-  const m = local.getUTCMinutes().toString().padStart(2, "0");
-  return `${h}:${m}`;
-}
-
-function formatPrice(n: number): string {
-  return `$ ${n.toLocaleString("es-AR")}`;
-}
-
-function formatDateLabel(fecha: string): string {
-  const [y, m, d] = fecha.split("-").map(Number);
-  if (!y || !m || !d) return fecha;
-  const date = new Date(Date.UTC(y, m - 1, d));
-  const formatted = date.toLocaleDateString("es-AR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  });
-  return formatted;
 }
 
 export function BuscarResults({
@@ -77,32 +52,33 @@ export function BuscarResults({
     let cancelled = false;
     setLoadingAvailability(true);
 
-    Promise.all(
-      clubs.map(async (c) => {
-        try {
-          const res = await fetch(
-            `/api/clubs/${c.club.slug}/availability?fecha=${encodeURIComponent(fecha)}`,
-            { cache: "no-store" },
-          );
-          if (!res.ok) return null;
-          const data = (await res.json()) as {
-            grid: Array<{ slots: SlotInfo[] }>;
-          };
-          const allSlots = data.grid.flatMap((g) => g.slots);
-          const prices = c.courts.map((court) => court.pricePerSlot);
-          const result: ClubAvailability = {
-            club: c.club,
-            slots: allSlots,
-            minPrice: prices.length ? Math.min(...prices) : 0,
-            maxPrice: prices.length ? Math.max(...prices) : 0,
-            freeCount: allSlots.filter((s) => s.free).length,
-          };
-          return result;
-        } catch {
-          return null;
-        }
-      }),
-    ).then((results) => {
+    void (async () => {
+      const results = await Promise.all(
+        clubs.map(async (c) => {
+          try {
+            const res = await fetch(
+              `/api/clubs/${c.club.slug}/availability?fecha=${encodeURIComponent(fecha)}`,
+              { cache: "no-store" },
+            );
+            if (!res.ok) return null;
+            const data = (await res.json()) as {
+              grid: Array<{ slots: SlotInfo[] }>;
+            };
+            const allSlots = data.grid.flatMap((g) => g.slots);
+            const prices = c.courts.map((court) => court.pricePerSlot);
+            const result: ClubAvailability = {
+              club: c.club,
+              slots: allSlots,
+              minPrice: prices.length ? Math.min(...prices) : 0,
+              maxPrice: prices.length ? Math.max(...prices) : 0,
+              freeCount: allSlots.filter((s) => s.free).length,
+            };
+            return result;
+          } catch {
+            return null;
+          }
+        }),
+      );
       if (cancelled) return;
       const map: Record<string, ClubAvailability> = {};
       for (const r of results) {
@@ -110,14 +86,14 @@ export function BuscarResults({
       }
       setAvailability(map);
       setLoadingAvailability(false);
-    });
+    })();
 
     return () => {
       cancelled = true;
     };
   }, [clubs, fecha]);
 
-  const dateLabel = formatDateLabel(fecha);
+  const dateLabel = formatLocalDateLong(fecha);
 
   return (
     <main className="bg-ground pb-24 md:pb-0">
@@ -236,7 +212,7 @@ export function BuscarResults({
                       <div className="text-right">
                         <p className="text-xs text-muted">desde</p>
                         <p className="text-xl font-extrabold tabular-nums">
-                          {formatPrice(minPrice)}{" "}
+                          {formatPriceARS(minPrice)}{" "}
                           <span className="text-sm font-medium text-muted">
                             / turno
                           </span>
@@ -253,7 +229,7 @@ export function BuscarResults({
                         avail.slots.slice(0, 6).map((s) => (
                           <SlotChip
                             key={s.startsAt}
-                            time={formatHour(s.startsAt)}
+                            time={formatSlotHour(s.startsAt)}
                             state={s.free ? "free" : "busy"}
                           />
                         ))

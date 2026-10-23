@@ -12,4 +12,5 @@ playwright-report
 tsconfig.tsbuildinfo
 seed-credentials*.txt
 Canchero — UI UX.html
+*.pdf
 .env*

@@ -52,9 +52,18 @@ jobs:
           name: coverage-report
           path: coverage/
 
-      - name: SonarCloud quality gate
+      - name: SonarCloud scan
         if: ${{ vars.SONAR_ENABLED == 'true' }}
         uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # Bloquea el pipeline si el quality gate de Sonar falla (bugs
+      # criticos, duplicacion > 5%, cobertura sobre codigo nuevo < 80%).
+      - name: SonarCloud quality gate check
+        if: ${{ vars.SONAR_ENABLED == 'true' }}
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 

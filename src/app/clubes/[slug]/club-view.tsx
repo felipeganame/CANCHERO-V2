@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { SlotChip } from "@/components/ui/slot-chip";
+import { formatSlotHour, formatPriceARS, formatLocalDateLong } from "@/lib/format";
 
 interface SlotInfo {
   startsAt: string;
@@ -43,31 +44,6 @@ const SPORT_LABELS: Record<string, string> = {
   tenis: "Tenis",
 };
 
-function formatHour(iso: string): string {
-  const d = new Date(iso);
-  const localMs = d.getTime() + -3 * 60 * 60 * 1000;
-  const local = new Date(localMs);
-  const h = local.getUTCHours().toString().padStart(2, "0");
-  const m = local.getUTCMinutes().toString().padStart(2, "0");
-  return `${h}:${m}`;
-}
-
-function formatPrice(n: number): string {
-  return `$ ${n.toLocaleString("es-AR")}`;
-}
-
-function formatDateLabel(fecha: string): string {
-  const [y, m, d] = fecha.split("-").map(Number);
-  if (!y || !m || !d) return fecha;
-  const date = new Date(Date.UTC(y, m - 1, d));
-  return date.toLocaleDateString("es-AR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  });
-}
-
 export function ClubView({
   club,
   grid,
@@ -80,7 +56,7 @@ export function ClubView({
   const sportSet = Array.from(
     new Set(grid.map((row) => row.court.sport)),
   );
-  const dateLabel = formatDateLabel(fecha);
+  const dateLabel = formatLocalDateLong(fecha);
 
   return (
     <main className="bg-ground pb-24 md:pb-10">
@@ -153,7 +129,7 @@ export function ClubView({
                     <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-2">
                       <h3 className="text-base font-bold">{row.court.name}</h3>
                       <span className="text-sm text-muted tabular-nums">
-                        {formatPrice(row.court.pricePerSlot)} / turno
+                        {formatPriceARS(row.court.pricePerSlot)} / turno
                       </span>
                     </div>
                     {row.slots.length === 0 ? (
@@ -163,7 +139,7 @@ export function ClubView({
                     ) : (
                       <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
                         {row.slots.map((slot) => {
-                          const time = formatHour(slot.startsAt);
+                          const time = formatSlotHour(slot.startsAt);
                           if (!slot.free) {
                             return (
                               <SlotChip
