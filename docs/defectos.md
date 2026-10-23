@@ -54,3 +54,23 @@ de "Ver turnos" (y el link de respaldo del mapa) sin pasar el parámetro
 **Regresión:** `tests/e2e/player-flow.spec.ts > CP-200` queda como test de
 regresión permanente (corre en el pipeline contra el entorno de QA real,
 no contra datos simulados).
+
+## DEF-03: promesa sin manejar en la carga de disponibilidad de `/buscar`
+
+**Encontrado por:** SonarCloud (análisis estático, regla `typescript:S9383`),
+no por tests dinámicos — ver `docs/metricas.md` para el detalle completo
+de por qué este tipo de defecto es terreno del análisis estático.
+
+**Archivo:** `src/app/buscar/buscar-results.tsx`
+
+**Obtenido (rojo):** `Promise.all(...).then(...)` dentro de un `useEffect`
+sin `.catch()`, sin `await` y sin marca explícita de ignorado. SonarCloud
+lo marca `BUG` (reliability, MAJOR) porque un rechazo de `Promise.all`
+quedaría sin manejar.
+
+**Corrección (verde):** se envolvió en una función async autoejecutada
+marcada con `void`, dejando explícito que no se espera el resultado.
+
+**Regresión:** no aplica test dinámico (el comportamiento era correcto en
+los casos ejercitados); la regresión la cubre el propio quality gate de
+SonarCloud, que ahora bloquea el pipeline si reaparece un bug de este tipo.
