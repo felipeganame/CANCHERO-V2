@@ -74,3 +74,45 @@ marcada con `void`, dejando explícito que no se espera el resultado.
 **Regresión:** no aplica test dinámico (el comportamiento era correcto en
 los casos ejercitados); la regresión la cubre el propio quality gate de
 SonarCloud, que ahora bloquea el pipeline si reaparece un bug de este tipo.
+
+## DEF-04: agotamiento del pool de conexiones de Postgres bajo carga concurrente
+
+**Encontrado por:** `tests/e2e/*.spec.ts` corriendo contra QA real, de forma
+intermitente (2 workers de Playwright en paralelo + el propio deploy
+disparando cold starts).
+
+**Síntoma:** reservas y cargas de página que deberían completarse en
+segundos quedaban "colgadas" del lado del servidor; Playwright timeouteaba
+esperando texto que la página nunca terminaba de renderizar. Un intento
+directo de conectarse a la base desde este equipo devolvió el error real:
+
+```
+FATAL: (EMAXCONNSESSION) max clients reached in session mode - max
+clients are limited to pool_size: 15
+```
+
+**Causa raíz:** `DATABASE_URL` usaba el pooler de Supabase en **modo
+sesión** (puerto 5432), que reserva una conexión persistente por cliente.
+En Vercel, cada invocación de función serverless puede ser una instancia
+nueva con su propia conexión `postgres-js`; bajo carga concurrente (varios
+jugadores reservando a la vez, tests E2E en paralelo, k6) se superaba el
+límite de 15 conexiones del free tier de Supabase, y las requests que no
+conseguían conexión quedaban bloqueadas hasta timeout.
+
+**Corrección:** se cambió `DATABASE_URL` (producción y preview, en Vercel)
+al pooler en **modo transacción** (puerto 6543, `pgbouncer=true`), que
+Supabase recomienda explícitamente para entornos serverless: cada query
+toma y libera la conexión en vez de mantenerla abierta, soportando muchos
+más clientes concurrentes con el mismo límite de 15. `src/server/db/client.ts`
+ya usaba `prepare: false`, requisito para que `postgres-js` funcione en
+modo transacción (sin prepared statements).
+
+**Por qué no se vio en desarrollo local:** el entorno local usa Postgres
+directo en la máquina del desarrollador, sin pooler ni límite de
+conexiones compartido, así que el problema es invisible hasta correr
+contra la infraestructura real compartida (otra razón para que el pipeline
+tenga una etapa de QA contra un deploy real antes de producción).
+
+**Regresión:** `tests/e2e/player-flow.spec.ts` y `tests/e2e/admin-flow.spec.ts`
+corren en cada deploy a QA; si el pool se agota de nuevo, van a volver a
+fallar de forma intermitente y visible en el pipeline.
