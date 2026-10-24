@@ -14,7 +14,18 @@ async function main() {
     where: eq(user.email, E2E_ADMIN_EMAIL),
   });
   if (existingAdmin) {
-    console.log("Seed E2E: ya existe, no se recrea.");
+    // No recreamos el club/cancha, pero nos aseguramos de que las cuentas
+    // de seed sigan verificadas (requireEmailVerification se activo despues
+    // de que estas cuentas ya existian en QA/CI).
+    await db
+      .update(user)
+      .set({ emailVerified: true })
+      .where(eq(user.email, E2E_ADMIN_EMAIL));
+    await db
+      .update(user)
+      .set({ emailVerified: true })
+      .where(eq(user.email, E2E_PLAYER_EMAIL));
+    console.log("Seed E2E: ya existe, no se recrea (emailVerified asegurado).");
     return;
   }
 
