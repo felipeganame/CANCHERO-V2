@@ -8,10 +8,12 @@
 
 Cubre las 10 reglas de negocio del dominio de reservas (RN-01 a RN-10,
 ver PLAN.md sección 5), los dos flujos principales de usuario (jugador y
-club admin) y la integración con los 3 servicios externos (Supabase,
-Vercel, Resend). No cubre: login real con Google (pendiente de
-credenciales), accesibilidad automatizada (Axe/Lighthouse, pendiente),
-ni pruebas cross-browser más allá de Chromium.
+club admin), el login/registro real con email y contraseña (Better Auth
++ verificación y recuperación de contraseña por Resend) y la
+integración con los 3 servicios externos (Supabase, Vercel, Resend).
+No cubre: login con Google OAuth (comentado por decisión de alcance,
+no por falta de tiempo), accesibilidad automatizada (Axe/Lighthouse,
+pendiente), ni pruebas cross-browser más allá de Chromium.
 
 ## Niveles de prueba y herramientas
 
@@ -31,7 +33,7 @@ ni pruebas cross-browser más allá de Chromium.
 |---|---|---|---|
 | Local | `localhost:3000` | Postgres local (sin pooler) | Desarrollo día a día |
 | QA / Staging | `canchero-qa.vercel.app` | Supabase `canchero-qa` (aislada de prod) | Smoke, E2E, stress — gate antes de producción |
-| Producción | `canchero-puce.vercel.app` | Supabase `canchero` | Usuarios reales (pendiente login de Google) |
+| Producción | `canchero-puce.vercel.app` | Supabase `canchero` | Usuarios reales, login/registro funcional |
 
 ## Criterios de entrada
 

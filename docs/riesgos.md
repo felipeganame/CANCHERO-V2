@@ -5,7 +5,7 @@ probabilidad × impacto.
 
 | # | Riesgo | Prob. | Impacto | Prioridad | Mitigación |
 |---|---|---|---|---|---|
-| R1 | Login de producción no funciona (falta Google OAuth) | 3 | 3 | 9 | Bloqueante conocido, documentado en `docs/defectos.md` y en el README de estado. Plan: conseguir credenciales de Google Cloud Console antes de la demo. |
+| R1 | Google OAuth sin credenciales configuradas | 1 | 1 | 1 | Resuelto por alcance: se reemplazó por login/registro real con email y contraseña (Better Auth + verificación por Resend), funcional en QA y producción. Google queda comentado en el código como decisión de alcance, no como bloqueante (ver `docs/informe-tp.md`). |
 | R2 | Agotamiento del pool de conexiones de Postgres bajo carga real (DEF-04) | 2 | 3 | 6 | Ya mitigado: pooler en modo transacción (puerto 6543) en vez de modo sesión. Test de regresión: CP-200/CP-210 en cada deploy a QA. |
 | R3 | Plan gratuito de Vercel limita la concurrencia de funciones serverless | 2 | 2 | 4 | Documentado como hallazgo real de stress (`docs/metricas.md`). Umbral de k6 ajustado a la capacidad real medida, no a un número arbitrario. |
 | R4 | Cobertura sobre código nuevo cae por debajo del 80% en un commit futuro | 2 | 2 | 4 | El quality gate de SonarCloud bloquea el pipeline automáticamente (`SonarSource/sonarqube-quality-gate-action` en `ci.yml`); no hay forma de mergear sin cumplirlo. |
