@@ -111,7 +111,8 @@ jobs:
         id: deploy
         run: |
           url=$(npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }})
-          echo "url=$url" >> "$GITHUB_OUTPUT"
+          npx vercel alias set "$url" canchero-qa.vercel.app --token=${{ secrets.VERCEL_TOKEN }}
+          echo "url=https://canchero-qa.vercel.app" >> "$GITHUB_OUTPUT"
 
   # ==========================================
   # STAGE 3: E2E, Smoke & Stress sobre el entorno de QA
@@ -210,8 +211,8 @@ jobs:
       - name: Deploy to Vercel (production)
         id: deploy
         run: |
-          url=$(npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }})
-          echo "url=$url" >> "$GITHUB_OUTPUT"
+          npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+          echo "url=https://canchero-puce.vercel.app" >> "$GITHUB_OUTPUT"
 
       - name: Post-deploy smoke (prod health check)
         run: curl -f "${{ steps.deploy.outputs.url }}/api/health" || exit 1
