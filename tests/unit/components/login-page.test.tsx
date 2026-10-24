@@ -17,7 +17,7 @@ describe("LoginPage", () => {
     });
     render(element);
     expect(
-      screen.getByRole("button", { name: /Continuar con Google/i }),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: /Registrate/i }),
+    ).toHaveAttribute("href", "/register?next=%2Freservar%3Fcancha%3D1");
   });
 });

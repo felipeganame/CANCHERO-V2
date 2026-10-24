@@ -258,16 +258,20 @@ export function BuscarResults({
           </p>
         </section>
 
-        <aside
-          aria-label="Mapa de complejos"
-          className="hidden min-w-0 flex-[1_1_460px] md:block"
-        >
-          <div className="relative h-[760px] overflow-hidden rounded-3xl border border-line bg-[#ECE6E1]">
-            <p className="absolute bottom-0 left-0 m-0 rounded-tr-lg bg-white px-2.5 py-1 text-[11px] text-[#5E5759]">
-              [Mapa próximamente]
-            </p>
-          </div>
-        </aside>
+        {/*
+          Mapa: comentado hasta integrar Leaflet + OpenStreetMap
+          (ver PLAN.md seccion 1). No se muestra en los deploys mientras tanto.
+          <aside
+            aria-label="Mapa de complejos"
+            className="hidden min-w-0 flex-[1_1_460px] md:block"
+          >
+            <div className="relative h-[760px] overflow-hidden rounded-3xl border border-line bg-[#ECE6E1]">
+              <p className="absolute bottom-0 left-0 m-0 rounded-tr-lg bg-white px-2.5 py-1 text-[11px] text-[#5E5759]">
+                [Mapa próximamente]
+              </p>
+            </div>
+          </aside>
+        */}
       </div>
 
       {clubs.length > 0 && !errorMessage ? (

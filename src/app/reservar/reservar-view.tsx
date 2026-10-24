@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronLeft, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
 import { formatPriceARS, formatSlotRange } from "@/lib/format";
 
 interface CourtInfo {
@@ -52,13 +51,6 @@ export function ReservarView({
 
   const { day, range } = formatSlotRange(startsAt);
   const sportLabel = SPORT_LABELS[court.sport] ?? court.sport;
-
-  async function handleGoogleLogin() {
-    await authClient.signIn.social({
-      provider: "google",
-      callbackURL: currentUrl,
-    });
-  }
 
   async function handleConfirm() {
     setSubmitting(true);
@@ -154,36 +146,22 @@ export function ReservarView({
                   Ingresá para reservar
                 </h1>
                 <p className="mt-3.5 max-w-md text-base leading-relaxed text-muted">
-                  Usamos tu cuenta de Google para identificarte. No tenés que
-                  crear usuario ni contraseña.
+                  Iniciá sesión o creá una cuenta para confirmar tu reserva.
                 </p>
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  className="mt-7 flex min-h-14 w-full max-w-[420px] items-center justify-center gap-3 rounded-2xl border-[1.5px] border-[#CFC6C8] bg-white font-bold text-ink"
-                >
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
+                <div className="mt-7 flex max-w-[420px] flex-wrap gap-3">
+                  <Link
+                    href={`/login?next=${encodeURIComponent(currentUrl)}`}
+                    className="inline-flex min-h-14 flex-1 items-center justify-center rounded-2xl bg-bordo px-6 text-base font-extrabold text-white no-underline"
                   >
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
-                  </svg>
-                  Continuar con Google
-                </button>
-                <Link
-                  href={`/login?next=${encodeURIComponent(currentUrl)}`}
-                  className="mt-4 inline-block text-sm font-semibold text-bordo no-underline hover:underline"
-                >
-                  Otras formas de entrar
-                </Link>
+                    Iniciar sesión
+                  </Link>
+                  <Link
+                    href={`/register?next=${encodeURIComponent(currentUrl)}`}
+                    className="inline-flex min-h-14 flex-1 items-center justify-center rounded-2xl border-[1.5px] border-line text-base font-bold text-ink no-underline"
+                  >
+                    Crear cuenta
+                  </Link>
+                </div>
               </div>
             )}
 

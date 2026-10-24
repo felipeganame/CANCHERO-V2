@@ -45,3 +45,29 @@ export function welcomeEmail(input: { name: string }): {
     html: `<p>Hola ${input.name}, gracias por registrarte en Canchero.</p>`,
   };
 }
+
+export function verifyEmailMessage(input: { name: string; url: string }): {
+  subject: string;
+  html: string;
+} {
+  return {
+    subject: "Confirmá tu cuenta de Canchero",
+    html: `<p>Hola ${input.name},</p>
+<p>Para activar tu cuenta de Canchero, confirmá tu email haciendo clic en el siguiente link:</p>
+<p><a href="${input.url}">Confirmar mi cuenta</a></p>
+<p>Si no creaste esta cuenta, podés ignorar este mensaje.</p>`,
+  };
+}
+
+export function resetPasswordEmail(input: { name: string; url: string }): {
+  subject: string;
+  html: string;
+} {
+  return {
+    subject: "Recuperar contraseña — Canchero",
+    html: `<p>Hola ${input.name},</p>
+<p>Pediste restablecer tu contraseña de Canchero. Hacé clic en el siguiente link para elegir una nueva:</p>
+<p><a href="${input.url}">Restablecer mi contraseña</a></p>
+<p>Si no pediste esto, podés ignorar este mensaje; tu contraseña actual sigue siendo válida.</p>`,
+  };
+}

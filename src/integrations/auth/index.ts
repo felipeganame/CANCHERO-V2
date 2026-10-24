@@ -2,19 +2,21 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/server/db/client";
 import * as schema from "@/server/db/schema";
-
-const testLoginEnabled = process.env.AUTH_TEST_LOGIN === "true";
+import { getEmailSender } from "@/integrations/email";
+import { verifyEmailMessage, resetPasswordEmail } from "@/integrations/email/templates";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    },
-  },
+  // Google OAuth: comentado hasta tener credenciales de Google Cloud
+  // Console. No se muestra en la UI mientras tanto (ver login-form.tsx).
+  // socialProviders: {
+  //   google: {
+  //     clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  //     clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  //   },
+  // },
   user: {
     additionalFields: {
       role: {
@@ -24,10 +26,20 @@ export const auth = betterAuth({
       },
     },
   },
-  // Solo en test/preview (AUTH_TEST_LOGIN=true): permite login con email/contraseña
-  // sembrado, porque Google OAuth no se puede automatizar en CI. En producción
-  // esta variable no existe y el proveedor no se registra (ver PLAN.md sección 8).
   emailAndPassword: {
-    enabled: testLoginEnabled,
+    enabled: true,
+    requireEmailVerification: true,
+    sendResetPassword: async ({ user, url }) => {
+      const { subject, html } = resetPasswordEmail({ name: user.name, url });
+      await getEmailSender().send({ to: user.email, subject, html });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      const { subject, html } = verifyEmailMessage({ name: user.name, url });
+      await getEmailSender().send({ to: user.email, subject, html });
+    },
   },
 });

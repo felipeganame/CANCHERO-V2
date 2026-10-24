@@ -18,16 +18,19 @@ async function main() {
     return;
   }
 
-  await auth.api.signUpEmail({
+  const playerSignUp = await auth.api.signUpEmail({
     body: { email: E2E_PLAYER_EMAIL, password: E2E_PASSWORD, name: "Jugador E2E" },
   });
+  // Cuentas de seed: se marcan verificadas directamente (no son un
+  // registro real, el login de prueba en CI no puede abrir un email).
+  await db.update(user).set({ emailVerified: true }).where(eq(user.id, playerSignUp.user.id));
 
   const adminSignUp = await auth.api.signUpEmail({
     body: { email: E2E_ADMIN_EMAIL, password: E2E_PASSWORD, name: "Admin E2E" },
   });
   await db
     .update(user)
-    .set({ role: "club_admin" })
+    .set({ role: "club_admin", emailVerified: true })
     .where(eq(user.id, adminSignUp.user.id));
 
   const clubId = randomUUID();

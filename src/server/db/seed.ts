@@ -55,7 +55,10 @@ async function main() {
     });
     const userId = signUp.user.id;
 
-    await db.update(user).set({ role: "club_admin" }).where(eq(user.id, userId));
+    await db
+      .update(user)
+      .set({ role: "club_admin", emailVerified: true })
+      .where(eq(user.id, userId));
 
     const clubId = randomUUID();
     await db.insert(clubs).values({

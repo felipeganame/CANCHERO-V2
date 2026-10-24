@@ -4,9 +4,8 @@ export const E2E_PASSWORD = "Test1234!";
 export const E2E_PLAYER_EMAIL = "e2e-player@canchero.test";
 export const E2E_ADMIN_EMAIL = "e2e-admin@canchero.test";
 
-// Login de test (AUTH_TEST_LOGIN=true, nunca disponible en produccion).
-// Usa la API directamente porque la UI solo ofrece Google OAuth, que no
-// se puede automatizar en CI (ver PLAN.md seccion 8).
+// Usa la API directamente (mas rapido y estable que llenar el form de
+// login en cada test E2E). Las cuentas de seed ya tienen emailVerified=true.
 export async function loginAs(page: Page, email: string): Promise<void> {
   const response = await page.request.post("/api/auth/sign-in/email", {
     data: { email, password: E2E_PASSWORD },
