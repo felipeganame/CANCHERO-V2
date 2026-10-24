@@ -53,16 +53,33 @@ y `reservar-view.tsx` (la conversión UTC → America/Argentina/Cordoba
 repetida 3 veces). Se centralizaron en `src/lib/format.ts` con 7 tests
 unitarios nuevos.
 
-### Pendiente: cobertura sobre código nuevo
+### Después (2026-10-24, tras agregar tests de componentes y de API)
 
-Las pantallas (jugador y panel de club) no tienen tests propios todavía —
-solo `domain/` y `server/services/` los tiene (100 % sentencias, 91.8 %
-ramas). El pipeline ahora **bloquea** si el quality gate de Sonar falla
-(antes solo corría el análisis sin chequear el resultado), así que esto
-queda expuesto como una ejecución roja real y documentada, no oculta.
-Plan: agregar tests de componentes (`@testing-library/react`) para las
-pantallas de mayor tamaño (`reservar-view.tsx`, `panel/canchas/page.tsx`,
-`buscar-results.tsx`) hasta volver a verde.
+Se agregó el proyecto `components` a Vitest (jsdom + Testing Library) y
+se amplió `coverage.include` para medir todo `src/` (antes solo medía
+`domain/` y `server/services/`, por eso el "antes" ya mostraba 21-22 %:
+las pantallas existían pero no se contaban como código con tests propios
+de verdad en el reporte). Se agregaron ~65 tests nuevos: componentes de
+cada pantalla (jugador y panel), páginas servidor (mockeando
+`next/headers` y `next/navigation`), y endpoints de API (mockeando
+repos/sesión, mismo patrón de doble de prueba que ya usaba `domain/`).
+
+| Métrica (cobertura local, Vitest) | Antes | Después |
+|---|---|---|
+| Sentencias | 21.3 % | **87.45 %** |
+| Ramas | — | 78.15 % |
+| Funciones | — | 81.25 % |
+| Tests totales | 40 | 106 (unit+components) + 19 (api) + 2 (integration) |
+
+Quedan sin cubrir, a propósito: `app/api/panel/bookings` (26 % — usa el
+query builder de Drizzle encadenado directamente, no un repositorio
+inyectable como el resto; mockearlo requeriría refactorizarlo a un repo
+con doble de prueba, que es el siguiente paso si hace falta subir más
+la cobertura ahí específicamente) y partes menores de `panel/canchas`
+(flujo de edición de precio inline) y `mis-reservas` (algunos branches
+de ordenamiento). El quality gate de SonarCloud recalcula esto con su
+propia fórmula combinada; ver el resultado real en
+https://sonarcloud.io/project/overview?id=felipeganame_CANCHERO-V2.
 
 
 ## Stress: límite de concurrencia en Vercel Hobby (free tier)

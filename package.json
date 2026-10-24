@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --project unit",
-    "test:unit": "vitest run --project unit",
+    "test": "vitest run --project unit --project components",
+    "test:unit": "vitest run --project unit --project components",
     "test:int": "vitest run --project integration",
     "test:api": "vitest run --project api",
     "test:e2e": "playwright test --project e2e",
@@ -61,7 +61,10 @@
     "drizzle-kit": "^0.31.1",
     "@testcontainers/postgresql": "^10.16.0",
     "dotenv": "^16.4.7",
-    "tsx": "^4.19.2"
+    "tsx": "^4.19.2",
+    "jsdom": "^25.0.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/user-event": "^14.5.2"
   },
   "packageManager": "pnpm@10.19.0"
 }

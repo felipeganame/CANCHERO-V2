@@ -14,12 +14,27 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
-      include: ["src/domain/**", "src/server/services/**"],
+      include: [
+        "src/domain/**",
+        "src/server/services/**",
+        "src/lib/**",
+        "src/components/**",
+        "src/app/**",
+      ],
     },
     projects: [
       {
         extends: true,
         test: { name: "unit", include: ["tests/unit/**/*.test.ts"] },
+      },
+      {
+        extends: true,
+        test: {
+          name: "components",
+          environment: "jsdom",
+          setupFiles: ["tests/setup/jsdom.ts"],
+          include: ["tests/unit/**/*.test.tsx"],
+        },
       },
       {
         extends: true,
