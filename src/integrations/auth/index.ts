@@ -9,6 +9,14 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
+  // Los dominios estables (alias) difieren de la URL de preview que
+  // Vercel asigna en cada deploy, asi que los listamos a mano para que
+  // el chequeo de origin de Better Auth no los rechace.
+  trustedOrigins: [
+    "http://localhost:3000",
+    "https://canchero-qa.vercel.app",
+    "https://canchero-puce.vercel.app",
+  ],
   // Google OAuth: comentado hasta tener credenciales de Google Cloud
   // Console. No se muestra en la UI mientras tanto (ver login-form.tsx).
   // socialProviders: {
