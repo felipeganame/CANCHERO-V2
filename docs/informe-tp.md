@@ -248,3 +248,111 @@ pendiente es específicamente Google OAuth como método adicional.
 Ninguna de estas limitaciones es un defecto escondido: cada una está
 documentada en el lugar correspondiente de `docs/`, con el motivo y,
 cuando aplica, el siguiente paso concreto.
+
+## 8. Nivel declarado y cumplimiento de metas
+
+**Nivel declarado: Nivel 3 — prototipo avanzado.**
+
+### 8.1 Metas de calidad (tabla del enunciado)
+
+| Aspecto | Exigido (Nivel 3) | Estado | Evidencia |
+|---|---|---|---|
+| Pipeline | Compilación, pruebas, análisis estático, cobertura, quality gate, reporte automático | **Cumplido** | `.github/workflows/ci.yml`, 4 etapas; corrida verde: https://github.com/felipeganame/CANCHERO-V2/actions/runs/40120787596 |
+| Quality gate | Bloquea ante bugs críticos, duplicación > 5 %, cobertura nueva < 80 % | **Cumplido** | `SonarSource/sonarqube-quality-gate-action` en `ci.yml`; bloqueó de verdad el pipeline el 2026-10-24 (78.25 % de cobertura nueva) hasta corregirlo con tests reales, no bajando el umbral |
+| Cobertura sobre código nuevo | 80 % | **Cumplido** | SonarCloud, cobertura de código nuevo actual ≥ 80 % (gate en estado *Passed*) |
+| Plan de pruebas y riesgos | Plan versionado, criterios de entrada/salida, riesgos por probabilidad × impacto, trazabilidad requisito → caso → defecto | **Cumplido** | `docs/plan-de-pruebas.md`, `docs/riesgos.md`, `docs/trazabilidad.md` |
+| Defectos | Registrados con pasos, esperado/obtenido, vinculados a su caso de prueba | **Cumplido parcialmente** | `docs/defectos.md` tiene los 4 defectos reales con pasos, causa raíz y el test de regresión que los cubre. No se usó Jira: se usó el propio repositorio (commits + `docs/defectos.md`) como herramienta de registro, trazable vía `git log` |
+| Herramienta nueva | Incorporada con el proceso de 5 pasos | **Cumplido** | `docs/herramienta-nueva.md` (k6): requisitos, mercado, prueba de concepto, matriz de decisión, despliegue incremental (gate de 8 VUs en cada push, corrida manual de 20 VUs documentada) |
+
+### 8.2 Nivel de avance (segunda tabla del enunciado)
+
+| Aspecto | Exigido (Nivel 3) | Estado | Evidencia |
+|---|---|---|---|
+| Cobertura mínima sobre código existente | 80 % | **Cumplido** | SonarCloud, "Overall Code" → Coverage 82.9 % (2026-10-24) |
+| Smoke test | Ejecutado por el pipeline tras el despliegue | **Cumplido** | Etapa `qa-verification` corre `tests/smoke/smoke.spec.ts` contra QA y, tras el deploy a prod, un curl de salud post-deploy |
+| Integración externa (Supabase) | Flujo E2E automatizado en cada despliegue | **Cumplido** | `tests/e2e/player-flow.spec.ts` y `admin-flow.spec.ts` corren contra QA real en cada push a `main`, antes de habilitar el deploy a producción |
+| Stress y esfuerzo sostenido | Stress ejecutado, con resultados y umbrales | **Cumplido parcialmente** | Stress (`tests/load/search.js`) corre en cada push con umbrales reales medidos (ver sección 9). El script de esfuerzo sostenido (`soak.js`, 15 min) está escrito pero **no tiene una ejecución documentada todavía** — queda como la meta no cumplida al 100 % de este nivel |
+
+### 8.3 Metas no cumplidas (honestidad de alcance)
+
+- **`soak.js` sin ejecutar.** Es la única meta de la tabla de nivel 3 que no se cerró del todo: el script existe y es ejecutable (`k6 run tests/load/soak.js`), pero no corrió todavía contra un entorno real con resultados documentados. Motivo: tiempo — 15 minutos de carga sostenida por corrida hacen cara la iteración cuando el resto del pipeline ya consume varios minutos por push.
+- **Accesibilidad automatizada (Axe/Lighthouse)** no forma parte de la tabla de metas del enunciado, pero se documenta igual como limitación conocida en la sección 7, porque afecta la característica de Usabilidad de ISO 25010 (`docs/iso25010.md`).
+- **Cross-browser más allá de Chromium** y **limpieza automática de datos de prueba en QA** tampoco son metas exigidas por el enunciado, pero quedan anotadas como deuda técnica conocida (riesgo R5 en `docs/riesgos.md`).
+
+## 9. Evolución de las métricas
+
+| Métrica | Antes (2026-10-23) | Después (2026-10-24) |
+|---|---|---|
+| Quality gate de SonarCloud | Failed (2 condiciones) | **Passed** |
+| Cobertura sobre código nuevo | 22.1 % | **≥ 80 %** |
+| Cobertura total (overall) | 21.3 % | **82.9 %** |
+| Bugs de reliability | 1 (MAJOR) | 0 |
+| Tests totales | 40 | **160** (122 unit/componentes, 32 API, 2 integración, 2 E2E, 2 smoke) |
+| Duplicación de código | 0.7 % | 0.0 % |
+
+El detalle de cómo se llegó a cada número (qué se agregó, qué defecto se
+encontró en el camino) está en `docs/metricas.md` y `docs/defectos.md` —
+acá solo se resume la evolución para que coincida con lo que muestra el
+pipeline y SonarCloud al momento de la entrega, como exige el enunciado.
+
+## 10. Análisis crítico
+
+**Lo que funcionó bien:**
+- Forzar el quality gate a bloquear de verdad (en vez de dejarlo como
+  paso cosmético) fue lo que expuso la cobertura real del proyecto
+  (22 %) y el bug de reliability — ninguno de los dos se habría
+  corregido si el gate no hubiera frenado el pipeline.
+- El patrón de repositorio con doble de prueba (interfaz +
+  implementación real + fake) permitió agregar ~120 tests nuevos sin
+  tocar una base de datos real en la mayoría de los casos, y sin
+  reescribir servicios existentes.
+- Probar contra infraestructura real (Supabase, Vercel) encontró 2
+  defectos (DEF-01, DEF-04) que ningún test contra una base de datos
+  local o un doble de prueba podría haber encontrado, porque dependen
+  de comportamiento específico del proveedor real bajo carga.
+
+**Lo que costó más de lo esperado:**
+- El pipeline de 4 etapas tardó varias iteraciones en estabilizarse
+  (problemas de `pnpm`, builds remotos de Vercel, SSL con Supabase)
+  antes de poder confiar en que un fallo del pipeline era un problema
+  real del código y no de la infraestructura de CI.
+- La flakiness de E2E (DEF-02, DEF-04) consumió tiempo de debugging
+  desproporcionado respecto a lo simple de la causa raíz final en cada
+  caso — la lección es que vale la pena sospechar de infraestructura
+  compartida (pool de conexiones, fechas por defecto) antes que del
+  código de la prueba en sí.
+- El alcance de autenticación (login real + verificación por email +
+  recuperación de contraseña) se agregó tarde en el desarrollo, lo que
+  obligó a reabrir documentación ya escrita (`docs/riesgos.md`,
+  `docs/plan-de-pruebas.md`) para que siguiera siendo honesta con el
+  estado real del código.
+
+**Qué se haría distinto con más tiempo:**
+- Ejecutar `soak.js` desde el principio del desarrollo, no dejarlo para
+  el final, para tener una línea de base de esfuerzo sostenido más
+  temprano.
+- Usar branches de Supabase (o una base separada por rama) para QA en
+  vez de reusar siempre la misma, evitando la acumulación de datos de
+  prueba que contribuyó a la flakiness de DEF-04.
+
+## 11. Conclusiones
+
+Canchero cumple el nivel 3 declarado en la gran mayoría de los aspectos
+exigidos: pipeline de 4 etapas con quality gate bloqueante de verdad,
+cobertura sobre código nuevo y sobre código existente por encima del
+80 %, trazabilidad completa requisito → caso → defecto, 4 defectos
+reales documentados con causa raíz (no fabricados para la entrega), una
+integración externa (Supabase) con pruebas E2E automatizadas en cada
+despliegue, y una herramienta nueva (k6) incorporada con el proceso de
+5 pasos completo.
+
+La meta que queda explícitamente sin cerrar es la ejecución documentada
+del script de esfuerzo sostenido (`soak.js`); se prioriza decirlo acá
+con claridad en vez de reportar un nivel 3 completo que no se sostiene
+ante la pregunta directa en la defensa.
+
+El valor más grande de este proceso no fue cumplir una checklist, sino
+que el pipeline encontró defectos reales (DEF-01 a DEF-04) durante el
+desarrollo normal, sin que nadie los buscara a propósito para la
+entrega — que es exactamente lo que un proceso de calidad bien armado
+debería producir.
