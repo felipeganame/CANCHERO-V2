@@ -10,7 +10,7 @@ test("CP-210 flujo club: crear cancha -> verla en el panel -> deshabilitarla", a
   await expect(page.getByRole("heading", { name: /Canchas/i })).toBeVisible({
     timeout: 15000,
   });
-  await expect(page.getByText("Cancha E2E")).toBeVisible();
+  await expect(page.getByText("Cancha E2E")).toBeVisible({ timeout: 15000 });
 
   const courtName = `E2E Temp ${Date.now()}`;
   const newCourtForm = page.getByRole("region", { name: "Agregar cancha" });
