@@ -58,10 +58,11 @@ comentario explicando por qué.
 son casos de uso que reciben repositorios inyectados por interfaz
 (`server/repositories/types.ts`), con una implementación real (Drizzle)
 y una falsa (doble de prueba, `server/repositories/fakes.ts`). Esto es
-lo que permite que 106 de los ~140 tests corran sin tocar una base de
-datos real y, al mismo tiempo, que los 2 tests de integración más
-importantes (RN-01, RN-05) sí corran contra Postgres real cuando
-importa. Ver `docs/integracion-externa.md` para el detalle completo.
+lo que permite que 154 de los 160 tests (unitarios, de componentes y de API) corran con
+dobles de prueba, sin tocar una base de datos real, mientras que los 2
+tests de integración más importantes (RN-01, RN-05) sí corren contra
+Postgres real cuando importa, y los 4 de E2E/smoke corren contra el
+entorno de QA realmente desplegado. Ver `docs/integracion-externa.md` para el detalle completo.
 
 ## 3. Cómo correr el proyecto
 
@@ -76,6 +77,11 @@ pnpm dev                # localhost:3000
 Variables de entorno en `.env.local` (ver `.env.example`): `DATABASE_URL`,
 `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL=http://localhost:3000`,
 `RESEND_API_KEY`, `RESEND_FROM`.
+
+Si `pnpm dev` se queda colgado compilando alguna página (pasó de forma
+intermitente durante el desarrollo, sin causa raíz identificada), usar
+`pnpm build && pnpm start` en su lugar — es el modo que se usó para
+todo el testeo manual de este proyecto.
 
 ### Verificación completa antes de un commit
 
@@ -208,26 +214,25 @@ prueba. Se reemplazó por completo:
   Leaflet + OpenStreetMap. Misma lógica: decisión de alcance, no omisión.
 
 **Nota sobre `docs/riesgos.md` (R1) y `docs/plan-de-pruebas.md`:**
-ambos documentos, al momento de escribirse, listaban "falta login real
-de Google" como el riesgo/pendiente más alto. Ese riesgo ya no aplica
-tal como estaba descrito: el login real (email/contraseña) está
-implementado y probado; lo que sigue pendiente es específicamente
-Google OAuth como método adicional, no el login en general. Se deja
-esta nota acá en vez de reescribir esos documentos para no perder el
-registro histórico de cómo evolucionó el riesgo durante el desarrollo.
+ambos documentos originalmente listaban "falta login real de Google"
+como el riesgo/pendiente más alto, de cuando el login todavía era un
+atajo de prueba. Ya se actualizaron los dos: R1 pasó de prioridad 9
+("bloqueante") a prioridad 1 ("resuelto por alcance, Google queda
+comentado a propósito"), y el plan de pruebas ya no dice "pendiente
+de login real" — el login real está implementado y probado; lo único
+pendiente es específicamente Google OAuth como método adicional.
 
 ## 7. Limitaciones conocidas (honestas, no ocultas)
 
-- **Envío de email a destinatarios arbitrarios:** la capa gratuita de
-  Resend solo permite enviar a la casilla verificada de la cuenta hasta
-  verificar un dominio propio (registros DNS). Se inició la
-  verificación de `canchero.ganamewebstudio.com` como subdominio de
-  envío durante esta entrega; mientras el DNS termina de propagar,
-  cualquier registro/reset de contraseña con un email distinto al de la
-  cuenta de Resend no va a recibir el correo (la cuenta sí se crea
-  igual, es solo la notificación la que no llega). No es un defecto del
-  código: es el comportamiento documentado de la capa gratuita de
-  cualquier proveedor de email transaccional.
+- **Envío de email a destinatarios arbitrarios:** resuelto durante esta
+  entrega. La capa gratuita de Resend solo permite enviar a la casilla
+  verificada de la cuenta hasta verificar un dominio propio (registros
+  DNS) — se verificó `canchero.ganamewebstudio.com` como subdominio de
+  envío (DKIM/SPF/DMARC vía Hostinger), y `RESEND_FROM` se actualizó en
+  Vercel (preview y producción) y en local. Confirmado con envíos
+  reales de prueba (registro + recuperación de contraseña) a una
+  casilla externa, con status 200 en los logs de Resend tanto en QA
+  como en producción.
 - **Accesibilidad automatizada (Axe/Lighthouse):** no está integrada al
   pipeline todavía (ver `docs/iso25010.md`, característica de
   Usabilidad).
