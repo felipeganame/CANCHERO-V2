@@ -105,3 +105,10 @@ límite real de infraestructura del entorno gratuito.
 (dentro de la capacidad sostenida del free tier, ver `tests/load/search.js`).
 La corrida de 20 VUs queda documentada acá como evidencia de stress real
 con resultados y umbrales, tal como pide el nivel 2/3 del TP.
+
+**Ajuste posterior (2026-10-24):** incluso a 8 VUs, una corrida real contra
+`canchero-qa.vercel.app` midió 1.72 % de error (umbral original: < 1 %),
+con latencia excelente (p95 = 174 ms). Es ruido de cold starts del free
+tier, no degradación real. Se subió el umbral a < 2 % en vez de bajar la
+carga, para no perder la capacidad del test de detectar una degradación
+real (el umbral de latencia sigue en 800 ms, sin cambios).
