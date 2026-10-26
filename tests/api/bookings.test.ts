@@ -47,6 +47,13 @@ vi.mock("@/server/repositories/drizzle-booking-repository", () => ({
 
 import { POST } from "@/app/api/bookings/route";
 
+function futureSlotISO(daysAhead = 30): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + daysAhead);
+  d.setUTCHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
 function makeRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/bookings", {
     method: "POST",
@@ -67,7 +74,7 @@ describe("POST /api/bookings", () => {
 
   it("CP-150 responde 401 si no hay sesion", async () => {
     getSession.mockResolvedValue(null);
-    const res = await POST(makeRequest({ courtId: "court-1", startsAt: "2026-10-26T00:00:00.000Z" }));
+    const res = await POST(makeRequest({ courtId: "court-1", startsAt: futureSlotISO() }));
     expect(res.status).toBe(401);
   });
 
@@ -80,14 +87,14 @@ describe("POST /api/bookings", () => {
   it("CP-152 responde 404 si la cancha no existe", async () => {
     getSession.mockResolvedValue({ user: { id: "user-1" } });
     const res = await POST(
-      makeRequest({ courtId: "no-existe", startsAt: "2026-10-26T00:00:00.000Z" }),
+      makeRequest({ courtId: "no-existe", startsAt: futureSlotISO() }),
     );
     expect(res.status).toBe(404);
   });
 
   it("CP-153 [RN-01] responde 201 la primera vez y 409 la segunda", async () => {
     getSession.mockResolvedValue({ user: { id: "user-1" } });
-    const body = { courtId: "court-1", startsAt: "2026-10-26T00:00:00.000Z" };
+    const body = { courtId: "court-1", startsAt: futureSlotISO() };
 
     const first = await POST(makeRequest(body));
     expect(first.status).toBe(201);
