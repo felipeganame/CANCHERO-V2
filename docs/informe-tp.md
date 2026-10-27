@@ -58,11 +58,12 @@ comentario explicando por qué.
 son casos de uso que reciben repositorios inyectados por interfaz
 (`server/repositories/types.ts`), con una implementación real (Drizzle)
 y una falsa (doble de prueba, `server/repositories/fakes.ts`). Esto es
-lo que permite que 154 de los 160 tests (unitarios, de componentes y de API) corran con
+lo que permite que 154 de los 162 tests (unitarios, de componentes y de API) corran con
 dobles de prueba, sin tocar una base de datos real, mientras que los 2
-tests de integración más importantes (RN-01, RN-05) sí corren contra
-Postgres real cuando importa, y los 4 de E2E/smoke corren contra el
-entorno de QA realmente desplegado. Ver `docs/integracion-externa.md` para el detalle completo.
+tests de integración por Testcontainers (RN-01, RN-05) corren contra
+Postgres real genérico, los 2 tests de integración equivalentes corren
+contra el proyecto Supabase de QA real (etapa `deploy-qa`), y los 4 de
+E2E/smoke corren contra el entorno de QA realmente desplegado. Ver `docs/integracion-externa.md` para el detalle completo.
 
 ## 3. Cómo correr el proyecto
 
@@ -267,7 +268,7 @@ cuando aplica, el siguiente paso concreto.
 |---|---|---|---|
 | Cobertura mínima sobre código existente | 80 % | **Cumplido** | SonarCloud, "Overall Code" → Coverage 82.9 % (2026-10-24) |
 | Smoke test | Ejecutado por el pipeline tras el despliegue | **Cumplido** | Etapa `qa-verification` corre `tests/smoke/smoke.spec.ts` contra QA y, tras el deploy a prod, un curl de salud post-deploy |
-| Integración externa (Supabase) | Flujo E2E automatizado en cada despliegue | **Cumplido** | `tests/e2e/player-flow.spec.ts` y `admin-flow.spec.ts` corren contra QA real en cada push a `main`, antes de habilitar el deploy a producción |
+| Integración externa (Supabase) | Flujo E2E automatizado en cada despliegue | **Cumplido** | `tests/e2e/player-flow.spec.ts` y `admin-flow.spec.ts` corren contra QA real en cada push a `main`, antes de habilitar el deploy a producción. Además, `tests/integration-qa/booking-repository.test.ts` prueba RN-01/RN-05 directamente contra el proyecto Supabase de QA real (no Testcontainers) en la misma etapa |
 | Stress y esfuerzo sostenido | Stress ejecutado, con resultados y umbrales | **Cumplido** | Stress (`tests/load/search.js`) corre en cada push con umbrales reales medidos (ver sección 9). Esfuerzo sostenido (`tests/load/soak.js`, 8 VUs, 15 min contra QA real) ejecutado el 2026-10-27: 0.00 % de error, p(95)=551.82 ms, ambos dentro de umbral — ver `docs/metricas.md` |
 
 ### 8.3 Metas no cumplidas (honestidad de alcance)
@@ -296,7 +297,7 @@ conocidas, no exigidas explícitamente por la rúbrica pero relevantes:
 | Cobertura sobre código nuevo | 22.1 % | **≥ 80 %** |
 | Cobertura total (overall) | 21.3 % | **82.9 %** |
 | Bugs de reliability | 1 (MAJOR) | 0 |
-| Tests totales | 40 | **160** (122 unit/componentes, 32 API, 2 integración, 2 E2E, 2 smoke) |
+| Tests totales | 40 | **162** (122 unit/componentes, 32 API, 2 integración Testcontainers, 2 integración QA real, 2 E2E, 2 smoke) |
 | Duplicación de código | 0.7 % | 0.0 % |
 
 El detalle de cómo se llegó a cada número (qué se agregó, qué defecto se

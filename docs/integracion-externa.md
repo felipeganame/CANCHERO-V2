@@ -45,6 +45,18 @@ de cuentas de prueba (`pnpm db:seed:e2e`) y los 2 flujos E2E completos
 (CP-200, CP-210) se ejecutan contra esa base real en cada push al
 repositorio.
 
+**`tests/integration-qa/booking-repository.test.ts`** repite las mismas
+dos reglas (CP-112/CP-113, equivalentes a CP-110/CP-111) pero contra el
+proyecto Supabase de QA real en vez de Testcontainers — corre en la
+etapa `deploy-qa` del pipeline, justo después de migrar y sembrar la
+base, con `DATABASE_URL` apuntando al Supabase real (`secrets.QA_DATABASE_URL`).
+Usa IDs únicos por corrida y borra todo lo que crea en `afterAll`,
+porque a diferencia del contenedor esta base es compartida y
+persistente. Es la integración "probada contra entorno real" que pide
+la tabla de metas del TP, en un nivel más estricto que Testcontainers:
+corre contra el proveedor real (Supabase), no contra un Postgres
+genérico levantado en el runner.
+
 ### Contingencia
 
 Si Supabase no responde, `/api/health` devuelve 503 y el smoke test del

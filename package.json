@@ -11,6 +11,7 @@
     "test": "vitest run --project unit --project components",
     "test:unit": "vitest run --project unit --project components",
     "test:int": "vitest run --project integration",
+    "test:int:qa": "vitest run -c vitest.integration-qa.config.ts",
     "test:api": "vitest run --project api",
     "test:e2e": "playwright test --project e2e",
     "test:smoke": "playwright test --project smoke",

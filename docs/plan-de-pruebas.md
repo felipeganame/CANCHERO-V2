@@ -22,6 +22,7 @@ pendiente), ni pruebas cross-browser más allá de Chromium.
 | Unitario | Vitest | `domain/`, `server/services/`, `lib/validation/`, componentes React (con React Testing Library + jsdom) | 106 tests |
 | API | Vitest + Next.js route handlers reales | Cada endpoint: códigos de estado, validaciones, permisos (RN-08), con repositorios falsos | 32 tests |
 | Integración | Vitest + Testcontainers (Postgres 17 real) | Índice único (RN-01), transacción de cancelación (RN-05) | 2 tests |
+| Integración (QA real) | Vitest contra Supabase QA real, en la etapa `deploy-qa` | Mismas reglas (RN-01, RN-05) contra el proveedor real, no un contenedor genérico | 2 tests |
 | E2E | Playwright | Flujo completo de jugador y de club admin, contra QA real desplegado | 2 flujos (CP-200, CP-210) |
 | Smoke | Playwright | Home carga, `/api/health` responde, post-deploy en QA y producción | 2 tests (CP-001, CP-002) |
 | Stress / esfuerzo sostenido | k6 | Latencia y tasa de error bajo carga concurrente contra QA real | 1 script en el gate (`search.js`), 2 adicionales escritos (`booking-race.js`, `soak.js`) |
@@ -77,6 +78,7 @@ sistemáticamente en las reglas con rangos o estados (ver
 pnpm test:unit     # unitarios + componentes (jsdom)
 pnpm test:api      # API, con repos falsos
 pnpm test:int      # integración, Testcontainers (requiere Docker)
+pnpm test:int:qa   # integración contra Supabase QA real (requiere DATABASE_URL de QA)
 pnpm test:e2e       # E2E, requiere BASE_URL apuntando a un deploy real
 pnpm test:smoke     # smoke, idem
 pnpm test:load      # stress (k6), requiere BASE_URL

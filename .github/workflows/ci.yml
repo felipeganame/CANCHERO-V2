@@ -107,6 +107,11 @@ jobs:
           AUTH_TEST_LOGIN: "true"
         run: pnpm db:seed:e2e
 
+      - name: Integration tests against real QA database (Supabase)
+        env:
+          DATABASE_URL: ${{ secrets.QA_DATABASE_URL }}
+        run: pnpm test:int:qa
+
       - name: Deploy preview build to Vercel (QA)
         id: deploy
         run: |
