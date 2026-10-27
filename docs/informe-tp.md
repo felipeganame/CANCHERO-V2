@@ -238,9 +238,6 @@ pendiente es específicamente Google OAuth como método adicional.
   Usabilidad).
 - **Cross-browser:** las pruebas E2E corren solo contra Chromium vía
   Playwright.
-- **`soak.js` (esfuerzo sostenido, 15 min):** el script está escrito
-  pero no tiene una ejecución documentada todavía (ver
-  `docs/herramienta-nueva.md`, paso 3).
 - **Limpieza de datos de prueba en QA:** las canchas `E2E Temp...`
   creadas por tests repetidos se acumulan en la base de QA (riesgo R5
   en `docs/riesgos.md`); no hay job de limpieza automática todavía.
@@ -271,13 +268,25 @@ cuando aplica, el siguiente paso concreto.
 | Cobertura mínima sobre código existente | 80 % | **Cumplido** | SonarCloud, "Overall Code" → Coverage 82.9 % (2026-10-24) |
 | Smoke test | Ejecutado por el pipeline tras el despliegue | **Cumplido** | Etapa `qa-verification` corre `tests/smoke/smoke.spec.ts` contra QA y, tras el deploy a prod, un curl de salud post-deploy |
 | Integración externa (Supabase) | Flujo E2E automatizado en cada despliegue | **Cumplido** | `tests/e2e/player-flow.spec.ts` y `admin-flow.spec.ts` corren contra QA real en cada push a `main`, antes de habilitar el deploy a producción |
-| Stress y esfuerzo sostenido | Stress ejecutado, con resultados y umbrales | **Cumplido parcialmente** | Stress (`tests/load/search.js`) corre en cada push con umbrales reales medidos (ver sección 9). El script de esfuerzo sostenido (`soak.js`, 15 min) está escrito pero **no tiene una ejecución documentada todavía** — queda como la meta no cumplida al 100 % de este nivel |
+| Stress y esfuerzo sostenido | Stress ejecutado, con resultados y umbrales | **Cumplido** | Stress (`tests/load/search.js`) corre en cada push con umbrales reales medidos (ver sección 9). Esfuerzo sostenido (`tests/load/soak.js`, 8 VUs, 15 min contra QA real) ejecutado el 2026-10-27: 0.00 % de error, p(95)=551.82 ms, ambos dentro de umbral — ver `docs/metricas.md` |
 
 ### 8.3 Metas no cumplidas (honestidad de alcance)
 
-- **`soak.js` sin ejecutar.** Es la única meta de la tabla de nivel 3 que no se cerró del todo: el script existe y es ejecutable (`k6 run tests/load/soak.js`), pero no corrió todavía contra un entorno real con resultados documentados. Motivo: tiempo — 15 minutos de carga sostenida por corrida hacen cara la iteración cuando el resto del pipeline ya consume varios minutos por push.
-- **Accesibilidad automatizada (Axe/Lighthouse)** no forma parte de la tabla de metas del enunciado, pero se documenta igual como limitación conocida en la sección 7, porque afecta la característica de Usabilidad de ISO 25010 (`docs/iso25010.md`).
-- **Cross-browser más allá de Chromium** y **limpieza automática de datos de prueba en QA** tampoco son metas exigidas por el enunciado, pero quedan anotadas como deuda técnica conocida (riesgo R5 en `docs/riesgos.md`).
+Todas las metas de las tablas 8.1 y 8.2 quedaron cumplidas al cierre de
+esta entrega. Lo único marcado como "cumplido parcialmente" es el
+registro de defectos (tabla 8.1): se usó el propio repositorio en vez
+de Jira, que es una herramienta equivalente pero no la nombrada
+literalmente en el enunciado.
+
+Fuera de las dos tablas del enunciado, quedan estas limitaciones
+conocidas, no exigidas explícitamente por la rúbrica pero relevantes:
+
+- **Accesibilidad automatizada (Axe/Lighthouse)** no está integrada al
+  pipeline, afecta la característica de Usabilidad de ISO 25010
+  (`docs/iso25010.md`).
+- **Cross-browser más allá de Chromium** y **limpieza automática de
+  datos de prueba en QA** quedan anotadas como deuda técnica conocida
+  (riesgo R5 en `docs/riesgos.md`).
 
 ## 9. Evolución de las métricas
 
@@ -328,28 +337,32 @@ pipeline y SonarCloud al momento de la entrega, como exige el enunciado.
   estado real del código.
 
 **Qué se haría distinto con más tiempo:**
-- Ejecutar `soak.js` desde el principio del desarrollo, no dejarlo para
-  el final, para tener una línea de base de esfuerzo sostenido más
-  temprano.
+- Ejecutar `soak.js` desde el principio del desarrollo en vez de dejarlo
+  para el cierre de la entrega — se terminó corriendo recién al final
+  (2026-10-27), con buen resultado (0 % de error, p95=551ms en 15 min),
+  pero una línea de base más temprana habría dado más margen para
+  reaccionar si el resultado hubiera sido malo.
 - Usar branches de Supabase (o una base separada por rama) para QA en
   vez de reusar siempre la misma, evitando la acumulación de datos de
   prueba que contribuyó a la flakiness de DEF-04.
 
 ## 11. Conclusiones
 
-Canchero cumple el nivel 3 declarado en la gran mayoría de los aspectos
-exigidos: pipeline de 4 etapas con quality gate bloqueante de verdad,
-cobertura sobre código nuevo y sobre código existente por encima del
-80 %, trazabilidad completa requisito → caso → defecto, 4 defectos
-reales documentados con causa raíz (no fabricados para la entrega), una
-integración externa (Supabase) con pruebas E2E automatizadas en cada
-despliegue, y una herramienta nueva (k6) incorporada con el proceso de
-5 pasos completo.
+Canchero cumple el nivel 3 declarado en los aspectos exigidos por las
+dos tablas del enunciado: pipeline de 4 etapas con quality gate
+bloqueante de verdad, cobertura sobre código nuevo y sobre código
+existente por encima del 80 %, trazabilidad completa requisito → caso
+→ defecto, 4 defectos reales documentados con causa raíz (no
+fabricados para la entrega), una integración externa (Supabase) con
+pruebas E2E automatizadas en cada despliegue, una herramienta nueva
+(k6) incorporada con el proceso de 5 pasos completo, y stress +
+esfuerzo sostenido ejecutados con resultados y umbrales reales.
 
-La meta que queda explícitamente sin cerrar es la ejecución documentada
-del script de esfuerzo sostenido (`soak.js`); se prioriza decirlo acá
-con claridad en vez de reportar un nivel 3 completo que no se sostiene
-ante la pregunta directa en la defensa.
+Lo único que queda como "cumplido parcialmente" en vez de "cumplido"
+es el registro de defectos, que se hizo en el propio repositorio en
+vez de Jira — se prioriza decirlo acá con claridad en vez de reportar
+un nivel 3 sin matices que no se sostendría ante la pregunta directa
+en la defensa.
 
 El valor más grande de este proceso no fue cumplir una checklist, sino
 que el pipeline encontró defectos reales (DEF-01 a DEF-04) durante el

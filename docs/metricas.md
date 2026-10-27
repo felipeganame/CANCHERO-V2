@@ -112,3 +112,27 @@ con latencia excelente (p95 = 174 ms). Es ruido de cold starts del free
 tier, no degradación real. Se subió el umbral a < 2 % en vez de bajar la
 carga, para no perder la capacidad del test de detectar una degradación
 real (el umbral de latencia sigue en 800 ms, sin cambios).
+
+## Esfuerzo sostenido (soak): 15 minutos de carga constante
+
+**Fecha:** 2026-10-27
+**Entorno:** QA (`canchero-qa.vercel.app`, deploy real)
+**Script:** `tests/load/soak.js`, 8 VUs constantes durante 15 min contra
+`/api/health` (mismos VUs y umbral de error que el stress gate, ajustados
+a la capacidad real medida arriba, no a un número arbitrario).
+
+| Métrica | Resultado |
+|---|---|
+| VUs sostenidos | 8, durante 13 min (más 1 min de rampa de subida y 1 de bajada) |
+| Requests totales | 4923 |
+| Tasa de error | **0.00 %** (umbral: < 2 %) |
+| p(95) de duración | **551.82 ms** (umbral: < 800 ms) |
+| Duración total | 15m00.7s |
+
+**Interpretación:** a diferencia del stress corto (picos de carga), el
+esfuerzo sostenido no mostró degradación progresiva — la latencia se
+mantuvo estable durante los 15 minutos (p95 por debajo del umbral en
+toda la corrida, 0 errores de 4923 requests). Confirma que el límite de
+concurrencia del free tier de Vercel (documentado arriba) es un techo de
+concurrencia instantánea, no un problema que empeore con el tiempo bajo
+carga sostenida moderada.
